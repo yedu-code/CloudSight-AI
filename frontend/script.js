@@ -1,7 +1,8 @@
 /**
- * CloudSight AI - Frontend Controller
+ * CloudSight AI - Frontend Controller & SaaS Interactive Dashboard
  * Supports Format A (multiband GeoTIFFs) & Format B (separate Sentinel-2 bands).
- * Includes interactive visualization and structured CSV & Excel (.xlsx) report export.
+ * Features Light / Dark Theme switching with localStorage persistence,
+ * interactive KPI metrics updates, animated statistics, and structured exports.
  */
 
 const API_BASE_URL = "http://127.0.0.1:8000";
@@ -15,6 +16,7 @@ let currentImageViewMode = "rgb"; // "rgb", "cloud", or "usable"
 let uploadMode = "multiband"; // "multiband" or "separate_bands"
 let bandAssignments = { B02: null, B03: null, B04: null, B08: null }; // maps band -> filename
 let reportTimestamp = "";
+let totalImagesProcessedSession = 0;
 
 // DOM Elements
 const dropZone = document.getElementById("drop-zone");
@@ -42,11 +44,36 @@ const sceneTabs = document.getElementById("scene-tabs");
 const sceneViewContainer = document.getElementById("scene-view-container");
 const backendStatusText = document.getElementById("backend-status-text");
 
+// Theme Switcher & KPI Elements
+const themeToggleBtn = document.getElementById("theme-toggle-btn");
+const kpiTotalProcessed = document.getElementById("kpi-total-processed");
+const kpiCloudCoverage = document.getElementById("kpi-cloud-coverage");
+const kpiUsableArea = document.getElementById("kpi-usable-area");
+
 // Initialize application
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   setupEventListeners();
   checkBackendHealth();
+  initEvaluationDashboard();
 });
+
+/* ==========================================================================
+   Theme Management (Light / Dark Mode with Persistence)
+   ========================================================================== */
+function initTheme() {
+  const savedTheme = localStorage.getItem("cloudsight-theme") || "dark";
+  document.documentElement.setAttribute("data-theme", savedTheme);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", nextTheme);
+      localStorage.setItem("cloudsight-theme", nextTheme);
+    });
+  }
+}
 
 function setupEventListeners() {
   browseBtn.addEventListener("click", (e) => {
@@ -82,6 +109,14 @@ function setupEventListeners() {
 
   [selectB02, selectB03, selectB04, selectB08].forEach((sel) => {
     sel.addEventListener("change", handleManualBandChange);
+  });
+
+  // Sample Scene Tags click helper
+  document.querySelectorAll(".sample-tag").forEach((tag) => {
+    tag.addEventListener("click", () => {
+      const sceneName = tag.textContent.replace("Scene '", "").replace("'", "").trim();
+      showValidationError(`Sample validation scene '${sceneName}' selected. You can drag the .tif files from data/validation/${sceneName}/ into this drop area.`);
+    });
   });
 }
 
@@ -241,14 +276,16 @@ function updateUI() {
 
   if (uploadMode === "separate_bands") {
     detectedModeBadge.textContent = "Format B (4 Separate Bands = 1 Scene)";
-    detectedModeBadge.style.background = "#fef3c7";
-    detectedModeBadge.style.color = "#92400e";
+    detectedModeBadge.style.background = "rgba(245, 158, 11, 0.15)";
+    detectedModeBadge.style.color = "var(--warning)";
+    detectedModeBadge.style.borderColor = "var(--warning-border)";
     bandAssignmentCard.style.display = "block";
     populateSelectDropdowns();
   } else {
     detectedModeBadge.textContent = `Format A (${selectedFiles.length} Multiband Scene${selectedFiles.length === 1 ? "" : "s"})`;
-    detectedModeBadge.style.background = "#e0f2fe";
-    detectedModeBadge.style.color = "#0369a1";
+    detectedModeBadge.style.background = "rgba(56, 189, 248, 0.15)";
+    detectedModeBadge.style.color = "var(--primary)";
+    detectedModeBadge.style.borderColor = "var(--border-color)";
     bandAssignmentCard.style.display = "none";
   }
 
@@ -260,7 +297,7 @@ function updateUI() {
 
     li.innerHTML = `
       <div class="file-item-info">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
         </svg>
@@ -305,7 +342,7 @@ function populateSelectDropdowns() {
 
 function showValidationError(message) {
   validationError.textContent = message;
-  validationError.style.display = "block";
+  validationError.style.display = "flex";
 }
 
 function clearValidationError() {
@@ -363,6 +400,19 @@ async function analyzeImages() {
     const data = await response.json();
     currentResults = data.results || [];
     reportTimestamp = new Date().toLocaleString();
+
+    // Update global KPI summary statistics
+    const successfulScenes = currentResults.filter((r) => r.status === "success");
+    totalImagesProcessedSession += successfulScenes.length;
+    kpiTotalProcessed.textContent = totalImagesProcessedSession;
+
+    if (successfulScenes.length > 0) {
+      const avgCloud = (successfulScenes.reduce((acc, r) => acc + (r.cloud_coverage_percentage || 0), 0) / successfulScenes.length).toFixed(1);
+      const avgUsable = (successfulScenes.reduce((acc, r) => acc + (r.usable_area_percentage || 0), 0) / successfulScenes.length).toFixed(1);
+      kpiCloudCoverage.textContent = `${avgCloud}%`;
+      kpiUsableArea.textContent = `${avgUsable}%`;
+    }
+
     renderResults(data);
   } catch (error) {
     showValidationError(`Analysis failed: ${error.message}.`);
@@ -400,7 +450,7 @@ function generateSceneInterpretation(cloudPct, usablePct, baselineDiff) {
 
 // Render Results Dashboard
 function renderResults(data) {
-  resultsContainer.style.display = "block";
+  resultsContainer.style.display = "flex";
   resultsContainer.scrollIntoView({ behavior: "smooth" });
 
   const summary = data.summary || {
@@ -517,12 +567,24 @@ function renderActiveScene() {
             <span class="${calibBadgeClass}">&bull; ${baselineCalib} (&tau;=${baselineTh})</span>
           </div>
         </div>
+
+        <div class="metric-card accent-violet">
+          <div class="metric-label">Difference vs Baseline</div>
+          <div class="metric-value ${diffClass}">${diffSign}%</div>
+          <div class="metric-footnote">Points Advantage / Variance</div>
+        </div>
       </div>
 
       <!-- Scene & Model Details -->
       <div class="metadata-grid">
         <div class="detail-table-card">
-          <h4>Scene Specification</h4>
+          <h4>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+            </svg>
+            Scene Specification
+          </h4>
           <table class="kv-table">
             <tr><td>Scene Name</td><td>${escapeHtml(scene.filename)}</td></tr>
             <tr><td>Upload Format</td><td>${scene.format_mode === 'separate_bands' ? 'Format B (4 Separate Bands)' : 'Format A (Multiband TIFF)'}</td></tr>
@@ -532,7 +594,12 @@ function renderActiveScene() {
         </div>
 
         <div class="detail-table-card">
-          <h4>Model & Baseline Parameters</h4>
+          <h4>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            Model & Baseline Parameters
+          </h4>
           <table class="kv-table">
             <tr><td>Model</td><td>${escapeHtml(scene.model_name || "U-Net")}</td></tr>
             <tr><td>Decision Threshold</td><td>${scene.model_threshold || 0.5}</td></tr>
@@ -545,11 +612,24 @@ function renderActiveScene() {
       <!-- Image Viewer Section -->
       <div class="image-viewer-section">
         <div class="viewer-header">
-          <h3>Scene Visualization</h3>
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            Satellite Imagery & Mask Visualizer
+          </h3>
           <div class="view-controls">
-            <button class="view-btn ${currentImageViewMode === 'rgb' ? 'active' : ''}" onclick="setImageViewMode('rgb')">True Color RGB</button>
-            <button class="view-btn ${currentImageViewMode === 'cloud' ? 'active' : ''}" onclick="setImageViewMode('cloud')">Cloud Mask</button>
-            <button class="view-btn ${currentImageViewMode === 'usable' ? 'active' : ''}" onclick="setImageViewMode('usable')">Usability Mask</button>
+            <button class="view-btn ${currentImageViewMode === 'rgb' ? 'active' : ''}" onclick="setImageViewMode('rgb')">
+              True Color RGB
+            </button>
+            <button class="view-btn ${currentImageViewMode === 'cloud' ? 'active' : ''}" onclick="setImageViewMode('cloud')">
+              Cloud Mask
+            </button>
+            <button class="view-btn ${currentImageViewMode === 'usable' ? 'active' : ''}" onclick="setImageViewMode('usable')">
+              Usability Mask
+            </button>
           </div>
         </div>
 
@@ -700,8 +780,6 @@ function downloadSceneReportCSV(sceneIndex) {
   const baselineCalib = scene.brightness_baseline ? scene.brightness_baseline.calibration_status : "Calibrated";
   const baselineTh = scene.brightness_baseline && scene.brightness_baseline.threshold_used !== undefined ? scene.brightness_baseline.threshold_used : 0.0905;
   const valMetrics = scene.brightness_baseline && scene.brightness_baseline.validation_metrics ? scene.brightness_baseline.validation_metrics : null;
-  const isCalib = baselineCalib.toLowerCase().includes("calibrated");
-  const calibBadgeClass = isCalib ? "calibration-success" : "calibration-alert";
   const baselineDiff = (cloudPct - baselinePct).toFixed(2);
   const bandsList = scene.bands_order ? scene.bands_order.join("; ") : "B02 (Blue); B03 (Green); B04 (Red); B08 (NIR)";
   const dimStr = scene.dimensions ? `${scene.dimensions.width}x${scene.dimensions.height}` : "512x512";
@@ -710,7 +788,6 @@ function downloadSceneReportCSV(sceneIndex) {
   const plainInterpretation = generateSceneInterpretation(cloudPct, usablePct, parseFloat(baselineDiff))
     .replace(/<[^>]*>/g, "");
 
-  // 3 consistent columns throughout: Section, Parameter, Value
   const csvData = [
     ["Section", "Parameter", "Value"],
     ["Report Metadata", "Application", "CloudSight AI"],
@@ -767,8 +844,6 @@ function downloadSceneReportXLSX(sceneIndex) {
   const baselineCalib = scene.brightness_baseline ? scene.brightness_baseline.calibration_status : "Calibrated";
   const baselineTh = scene.brightness_baseline && scene.brightness_baseline.threshold_used !== undefined ? scene.brightness_baseline.threshold_used : 0.0905;
   const valMetrics = scene.brightness_baseline && scene.brightness_baseline.validation_metrics ? scene.brightness_baseline.validation_metrics : null;
-  const isCalib = baselineCalib.toLowerCase().includes("calibrated");
-  const calibBadgeClass = isCalib ? "calibration-success" : "calibration-alert";
   const baselineDiff = (cloudPct - baselinePct).toFixed(2);
   const bandsList = scene.bands_order ? scene.bands_order.join(", ") : "B02 (Blue), B03 (Green), B04 (Red), B08 (NIR)";
   const dimStr = scene.dimensions ? `${scene.dimensions.width}x${scene.dimensions.height}` : "512x512";
@@ -811,10 +886,9 @@ function downloadSceneReportXLSX(sceneIndex) {
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  // Set column widths for readability
   ws["!cols"] = [
-    { wch: 38 }, // Column A
-    { wch: 55 }  // Column B
+    { wch: 38 },
+    { wch: 55 }
   ];
 
   const wb = XLSX.utils.book_new();
@@ -849,6 +923,7 @@ function updateImageView() {
     imgEl.src = scene.rgb_preview || scene.cloud_mask;
     legendEl.innerHTML = `
       <div class="legend-item">
+        <span class="legend-box legend-cyan"></span>
         <span>Sentinel-2 True Color Preview (B04-Red, B03-Green, B02-Blue with 2% stretch)</span>
       </div>
     `;
@@ -884,7 +959,6 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-
 
 /* ==========================================================================
    Model Evaluation Benchmark Section Controller
@@ -1006,7 +1080,6 @@ function renderScenesTable() {
   if (!tbody || !EVALUATION_DATA.scenes) return;
 
   let filtered = EVALUATION_DATA.scenes.filter((s) => {
-    // Search filter
     const matchesSearch =
       !evalSearchTerm ||
       s.scene_id.toLowerCase().includes(evalSearchTerm) ||
@@ -1014,14 +1087,12 @@ function renderScenesTable() {
 
     if (!matchesSearch) return false;
 
-    // Coverage category filter
     if (evalCoverageFilter === "clear") return s.cloud_coverage_percent < 20;
     if (evalCoverageFilter === "moderate") return s.cloud_coverage_percent >= 20 && s.cloud_coverage_percent < 80;
     if (evalCoverageFilter === "cloudy") return s.cloud_coverage_percent >= 80;
     return true;
   });
 
-  // Sort
   filtered.sort((a, b) => {
     let valA = a[evalSortField];
     let valB = b[evalSortField];
@@ -1067,8 +1138,3 @@ function renderScenesTable() {
   });
   tbody.appendChild(fragment);
 }
-
-// Call on startup
-document.addEventListener("DOMContentLoaded", () => {
-  initEvaluationDashboard();
-});

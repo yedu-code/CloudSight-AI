@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudSight AI - Satellite Cloud Detection & Evaluation Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>CloudSight AI</h1>
+          <p class="subtitle">AI-powered cloud detection and satellite image usability analysis</p>
+        </div>
+      </div>
+      <div class="header-badge">
+        <span class="status-dot"></span>
+        <span id="backend-status-text">Checking Backend...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- Notice Banner -->
+    <section class="info-banner">
+      <div class="banner-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="banner-text">
+        <strong>Supported Sentinel-2 Upload Formats (Up to 4 Scenes):</strong><br>
+        &bull; <strong>Format A (Single Multiband):</strong> 1 GeoTIFF per scene with 4 bands (<code>B02</code>-Blue, <code>B03</code>-Green, <code>B04</code>-Red, <code>B08</code>-NIR at 512&times;512).<br>
+        &bull; <strong>Format B (Separate Bands):</strong> 4 single-band GeoTIFFs (<code>B02</code>, <code>B03</code>, <code>B04</code>, <code>B08</code>). They are automatically detected or assigned and combined into <strong>ONE scene</strong>.
+      </div>
+    </section>
+
+    <!-- Upload Section -->
+    <section class="card upload-card">
+      <div class="card-header">
+        <h2>Upload Satellite Imagery</h2>
+        <span class="file-limit-pill" id="file-count-badge">0 Files Selected</span>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" multiple accept=".tif,.tiff" class="file-input-hidden">
+        <div class="drop-zone-content">
+          <div class="drop-icon">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <p class="drop-primary-text">Drag and drop your GeoTIFF file(s) here</p>
+          <p class="drop-secondary-text">or <button type="button" class="btn-browse" id="browse-btn">browse files</button> from your computer</p>
+          <span class="drop-note">Supported: .tif, .tiff &bull; Format A (1 multiband) or Format B (4 separate bands)</span>
+        </div>
+      </div>
+
+      <!-- File Validation Alerts -->
+      <div class="alert alert-error" id="validation-error" style="display: none;"></div>
+
+      <!-- Selected Files List -->
+      <div class="file-list-container" id="file-list-container" style="display: none;">
+        <div class="file-list-header">
+          <h3>Selected Files</h3>
+          <span class="mode-indicator" id="detected-mode-badge">Format A (Multiband)</span>
+        </div>
+        <ul class="file-list" id="file-list"></ul>
+      </div>
+
+      <!-- Separate Bands Assignment Panel (Format B) -->
+      <div class="card band-assignment-card" id="band-assignment-card" style="display: none;">
+        <div class="band-assignment-header">
+          <div>
+            <h4>Sentinel-2 Band Assignment (Format B)</h4>
+            <p class="subtext">Verify or assign each uploaded file to its corresponding Sentinel-2 band. All 4 bands are required.</p>
+          </div>
+          <span class="assignment-status-badge" id="assignment-status-badge">Incomplete</span>
+        </div>
+
+        <div class="band-assignment-grid">
+          <div class="band-slot" data-band="B02">
+            <div class="slot-header">
+              <span class="band-tag tag-b02">B02</span>
+              <span class="band-desc">Blue (~490 nm)</span>
+            </div>
+            <select class="band-select" id="select-B02"></select>
+          </div>
+
+          <div class="band-slot" data-band="B03">
+            <div class="slot-header">
+              <span class="band-tag tag-b03">B03</span>
+              <span class="band-desc">Green (~560 nm)</span>
+            </div>
+            <select class="band-select" id="select-B03"></select>
+          </div>
+
+          <div class="band-slot" data-band="B04">
+            <div class="slot-header">
+              <span class="band-tag tag-b04">B04</span>
+              <span class="band-desc">Red (~665 nm)</span>
+            </div>
+            <select class="band-select" id="select-B04"></select>
+          </div>
+
+          <div class="band-slot" data-band="B08">
+            <div class="slot-header">
+              <span class="band-tag tag-b08">B08</span>
+              <span class="band-desc">Near Infrared (~842 nm)</span>
+            </div>
+            <select class="band-select" id="select-B08"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div class="upload-actions">
+        <button class="btn btn-primary" id="analyze-btn" disabled>
+          <span class="btn-text">Analyze Images</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Loading State -->
+    <section class="card loading-card" id="loading-card" style="display: none;">
+      <div class="spinner"></div>
+      <h3 id="loading-text">Analyzing satellite scenes with U-Net...</h3>
+      <p class="loading-subtext">Executing deep learning segmentation and calculating cloud coverage metrics.</p>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-container" id="results-container" style="display: none;">
+      <div class="section-heading">
+        <h2>Live Scene Analysis Results</h2>
+        <div class="summary-pills">
+          <span class="summary-pill pill-success" id="summary-success-pill">0 Succeeded</span>
+          <span class="summary-pill pill-failed" id="summary-failed-pill" style="display: none;">0 Failed</span>
+        </div>
+      </div>
+
+      <!-- Scene Selection Tabs -->
+      <div class="scene-tabs" id="scene-tabs"></div>
+
+      <!-- Scene Detail Container -->
+      <div id="scene-view-container"></div>
+    </section>
+
+    <!-- Model Evaluation Benchmark Section -->
+    <section class="eval-container" id="evaluation-section">
+      <div class="eval-header-card">
+        <div class="eval-title-wrap">
+          <div class="eval-icon-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 20V10M12 20V4M6 20v-6"/>
+            </svg>
+          </div>
+          <div>
+            <h2>Model Evaluation & Benchmark Dashboard</h2>
+            <p class="eval-subtext">
+              Independent test-set evaluation across <strong>1,262 labeled Sentinel-2 scenes</strong> comparing the trained U-Net against the heuristic Brightness Baseline.
+            </p>
+          </div>
+        </div>
+        <div class="dataset-pill">
+          <span>Test Dataset: 1,262 Scenes</span>
+        </div>
+      </div>
+
+      <!-- Benchmark Summary Metric Cards -->
+      <div class="metrics-grid" id="eval-metrics-summary">
+        <div class="metric-card accent-blue">
+          <div class="metric-label">U-Net Mean IoU</div>
+          <div class="metric-value">88.31%</div>
+          <div class="metric-footnote"><span class="highlight-up">+23.28% pts</span> vs Baseline (65.04%)</div>
+        </div>
+
+        <div class="metric-card accent-emerald">
+          <div class="metric-label">U-Net Mean Dice (F1)</div>
+          <div class="metric-value">93.79%</div>
+          <div class="metric-footnote"><span class="highlight-up">+14.98% pts</span> vs Baseline (78.82%)</div>
+        </div>
+
+        <div class="metric-card accent-amber">
+          <div class="metric-label">False Ground Rate</div>
+          <div class="metric-value">8.54%</div>
+          <div class="metric-footnote"><span class="highlight-down">-22.84% pts</span> reduction vs Baseline (31.38%)</div>
+        </div>
+
+        <div class="metric-card accent-blue">
+          <div class="metric-label">Precision & Specificity</div>
+          <div class="metric-value">96.25% / 95.17%</div>
+          <div class="metric-footnote">Low false alarms across bright terrain</div>
+        </div>
+      </div>
+
+      <!-- Model Comparison Table Card -->
+      <div class="card eval-comparison-card">
+        <div class="card-header">
+          <h3>1. Model Comparison: U-Net vs. Brightness Baseline</h3>
+          <span class="eval-tag">Reported Test Benchmark — Source Verification Pending</span>
+        </div>
+        <p class="card-desc">
+          Comparative performance metrics from evaluation CSV records. Improvement indicates percentage point advantage of U-Net over the baseline.
+        </p>
+        <div class="report-table-wrapper">
+          <table class="eval-table" id="comparison-table">
+            <thead>
+              <tr>
+                <th>Evaluation Metric</th>
+                <th>Brightness Baseline</th>
+                <th>U-Net Architecture</th>
+                <th>Improvement (Percentage Points)</th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body">
+              <!-- Dynamically populated from EVALUATION_DATA -->
+            </tbody>
+          </table>
+        </div>
+        <div class="eval-caveat-note">
+          <p>
+            <strong>Methodology Note:</strong> These metrics are reproduced from supplied evaluation CSV records. The original evaluation script and raw ground-truth masks are not currently bundled with this project, so independent reproduction has not yet been established.
+          </p>
+        </div>
+      </div>
+
+      <!-- Cloud Coverage Distribution & Dataset Statistics -->
+      <div class="eval-split-grid">
+        <!-- Distribution Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3>2. Cloud Coverage Distribution</h3>
+            <span class="eval-tag">10% Bins</span>
+          </div>
+          <p class="card-desc">Distribution of scene cloud coverage percentage across all 1,262 benchmark scenes.</p>
+          <div class="distribution-chart-container" id="distribution-chart">
+            <!-- Dynamically populated bar chart -->
+          </div>
+        </div>
+
+        <!-- Dataset Summary Stats -->
+        <div class="card">
+          <div class="card-header">
+            <h3>3. Test-Set Composition</h3>
+            <span class="eval-tag">Summary Statistics</span>
+          </div>
+          <p class="card-desc">Summary metrics across the 1,262 test scenes.</p>
+          <table class="kv-table" style="margin-top: 0.5rem;">
+            <tr><td>Total Benchmark Scenes</td><td>1,262</td></tr>
+            <tr><td>Mean Cloud Coverage</td><td>54.72%</td></tr>
+            <tr><td>Median Cloud Coverage</td><td>55.62%</td></tr>
+            <tr><td>Mean Usable Surface Area</td><td>45.28%</td></tr>
+            <tr><td>Median Usable Surface Area</td><td>44.38%</td></tr>
+            <tr><td>Clear Scenes (&lt; 20% Cloud)</td><td>322 (25.5%)</td></tr>
+            <tr><td>Partially Cloudy (20% – 80%)</td><td>477 (37.8%)</td></tr>
+            <tr><td>Cloud-Dominated (&ge; 80% Cloud)</td><td>463 (36.7%)</td></tr>
+            <tr><td>NoData Missing Pixels</td><td>0.00%*</td></tr>
+          </table>
+          <p class="eval-nodata-note">
+            *Note: All records show 0.00% NoData. Whether NoData pixels (label 255) were excluded during pre-processing could not be independently verified because the original evaluation code is unavailable.
+          </p>
+        </div>
+      </div>
+
+      <!-- Searchable & Sortable Scene Records Table -->
+      <div class="card eval-records-card">
+        <div class="records-header">
+          <div>
+            <h3>4. Per-Scene Usability Records</h3>
+            <p class="card-desc">Per-scene benchmark records — mask provenance not independently verified.</p>
+          </div>
+          <div class="records-search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="scene-search-input" placeholder="Search by Scene ID or Path...">
+          </div>
+        </div>
+
+        <div class="records-controls-bar">
+          <div class="filter-group">
+            <label for="filter-coverage">Cloud Category:</label>
+            <select id="filter-coverage" class="filter-select">
+              <option value="all">All Scenes (1,262)</option>
+              <option value="clear">Clear (&lt; 20% Cloud)</option>
+              <option value="moderate">Partially Cloudy (20% – 80%)</option>
+              <option value="cloudy">Cloud-Dominated (&ge; 80%)</option>
+            </select>
+          </div>
+          <div class="records-stats-text" id="records-stats-text">
+            Showing 1,262 of 1,262 scenes
+          </div>
+        </div>
+
+        <div class="report-table-wrapper" style="max-height: 480px; overflow-y: auto;">
+          <table class="eval-table records-table" id="scenes-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="scene_id">Scene ID <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th class="sortable" data-sort="relative_path">Relative Index <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th class="sortable" data-sort="cloud_coverage_percent">Cloud Coverage (%) <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th class="sortable" data-sort="usable_area_percent">Usable Area (%) <span class="sort-icon">&#9650;&#9660;</span></th>
+                <th>Usability Status</th>
+              </tr>
+            </thead>
+            <tbody id="scenes-table-body">
+              <!-- Dynamically populated from EVALUATION_DATA.scenes -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>CloudSight AI &bull; Sentinel-2 Cloud Detection Pipeline &bull; CPU U-Net Inference Engine &bull; Benchmark Dataset (1,262 Scenes)</p>
+    </div>
+  </footer>
+
+  <script src="xlsx.full.min.js"></script>
+  <script src="evaluation_data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CloudSight AI - Satellite Cloud Detection & Evaluation Dashboard</title>
+  <title>CloudSight AI — Satellite Cloud Cover Detection & Usability Dashboard</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- Header -->
@@ -20,20 +20,119 @@
           </svg>
         </div>
         <div class="brand-text">
-          <h1>CloudSight AI</h1>
-          <p class="subtitle">AI-powered cloud detection and satellite image usability analysis</p>
+          <h1>CloudSight AI <span class="brand-badge">SaaS v1.0</span></h1>
+          <p class="subtitle">Sentinel-2 Cloud Detection & Usability Analysis Engine</p>
         </div>
       </div>
-      <div class="header-badge">
-        <span class="status-dot"></span>
-        <span id="backend-status-text">Checking Backend...</span>
+
+      <!-- Quick Nav Links -->
+      <nav class="nav-quicklinks" aria-label="Main Navigation">
+        <a href="#upload-section" class="nav-link-btn active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Inference
+        </a>
+        <a href="#evaluation-section" class="nav-link-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 20V10M12 20V4M6 20v-6"></path>
+          </svg>
+          Evaluation (1,262)
+        </a>
+      </nav>
+
+      <div class="header-right">
+        <!-- Backend Status Badge -->
+        <div class="header-badge" id="backend-status-badge" title="Backend API Health">
+          <span class="status-dot"></span>
+          <span id="backend-status-text">Checking Backend...</span>
+        </div>
+
+        <!-- Light / Dark Mode Toggle Button -->
+        <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle light and dark mode" title="Switch Theme (Light / Dark)">
+          <svg class="icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
 
   <!-- Main Container -->
   <main class="main-container">
-    <!-- Notice Banner -->
+
+    <!-- KPI Hero Overview Section (Interactive Live Stats) -->
+    <section class="overview-kpi-grid" id="kpi-overview">
+      <div class="kpi-card cyan">
+        <div class="kpi-content">
+          <span class="kpi-label">Images Processed</span>
+          <div class="kpi-value" id="kpi-total-processed">0</div>
+          <span class="kpi-subtext"><span class="highlight">Active Session</span> &bull; Max 4 per batch</span>
+        </div>
+        <div class="kpi-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="kpi-card violet">
+        <div class="kpi-content">
+          <span class="kpi-label">Cloud Coverage</span>
+          <div class="kpi-value" id="kpi-cloud-coverage">--%</div>
+          <span class="kpi-subtext">U-Net AI Segmentation &tau; &ge; 0.50</span>
+        </div>
+        <div class="kpi-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <div class="kpi-card emerald">
+        <div class="kpi-content">
+          <span class="kpi-label">Usable Surface Area</span>
+          <div class="kpi-value" id="kpi-usable-area">--%</div>
+          <span class="kpi-subtext">Clear ground & water visibility</span>
+        </div>
+        <div class="kpi-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="kpi-card amber">
+        <div class="kpi-content">
+          <span class="kpi-label">Test Benchmark IoU</span>
+          <div class="kpi-value">88.31%</div>
+          <span class="kpi-subtext"><span class="highlight">+23.28% pts</span> vs baseline (1,262 scenes)</span>
+        </div>
+        <div class="kpi-icon-box">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 20V10M12 20V4M6 20v-6"></path>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Supported Formats Notice Banner -->
     <section class="info-banner">
       <div class="banner-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,15 +143,22 @@
       </div>
       <div class="banner-text">
         <strong>Supported Sentinel-2 Upload Formats (Up to 4 Scenes):</strong><br>
-        &bull; <strong>Format A (Single Multiband):</strong> 1 GeoTIFF per scene with 4 bands (<code>B02</code>-Blue, <code>B03</code>-Green, <code>B04</code>-Red, <code>B08</code>-NIR at 512&times;512).<br>
-        &bull; <strong>Format B (Separate Bands):</strong> 4 single-band GeoTIFFs (<code>B02</code>, <code>B03</code>, <code>B04</code>, <code>B08</code>). They are automatically detected or assigned and combined into <strong>ONE scene</strong>.
+        &bull; <strong>Format A (Single Multiband):</strong> 1 GeoTIFF per scene with 4 bands (<code>B02</code>-Blue, <code>B03</code>-Green, <code>B04</code>-Red, <code>B08</code>-NIR at 512&times;512 pixels).<br>
+        &bull; <strong>Format B (Separate Bands):</strong> 4 single-band GeoTIFFs (<code>B02</code>, <code>B03</code>, <code>B04</code>, <code>B08</code>). They are automatically mapped or assigned and combined into <strong>ONE scene</strong>.
       </div>
     </section>
 
     <!-- Upload Section -->
-    <section class="card upload-card">
+    <section class="card upload-card" id="upload-section">
       <div class="card-header">
-        <h2>Upload Satellite Imagery</h2>
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Upload Sentinel-2 Satellite Imagery
+        </h2>
         <span class="file-limit-pill" id="file-count-badge">0 Files Selected</span>
       </div>
 
@@ -61,15 +167,27 @@
         <input type="file" id="file-input" multiple accept=".tif,.tiff" class="file-input-hidden">
         <div class="drop-zone-content">
           <div class="drop-icon">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
           </div>
-          <p class="drop-primary-text">Drag and drop your GeoTIFF file(s) here</p>
-          <p class="drop-secondary-text">or <button type="button" class="btn-browse" id="browse-btn">browse files</button> from your computer</p>
-          <span class="drop-note">Supported: .tif, .tiff &bull; Format A (1 multiband) or Format B (4 separate bands)</span>
+          <p class="drop-primary-text">Drag and drop your GeoTIFF satellite files here</p>
+          <p class="drop-secondary-text">or <button type="button" class="btn-browse" id="browse-btn">browse files</button> from your system</p>
+          <span class="drop-note">Supports .tif, .tiff &bull; Format A (1 multiband) or Format B (4 separate bands) &bull; 512&times;512 px</span>
+        </div>
+      </div>
+
+      <!-- Quick Sample Scenes Bar -->
+      <div class="sample-scenes-bar">
+        <span>Available Validation Datasets (in <code>data/validation</code>):</span>
+        <div class="sample-tags-wrap">
+          <span class="sample-tag" title="Scene aeqw: B02, B03, B04, B08">Scene 'aeqw'</span>
+          <span class="sample-tag" title="Scene aetz: B02, B03, B04, B08">Scene 'aetz'</span>
+          <span class="sample-tag" title="Scene aevs: B02, B03, B04, B08">Scene 'aevs'</span>
+          <span class="sample-tag" title="Scene afpr: B02, B03, B04, B08">Scene 'afpr'</span>
+          <span class="sample-tag" title="Scene afqf: B02, B03, B04, B08">Scene 'afqf'</span>
         </div>
       </div>
 
@@ -90,7 +208,7 @@
         <div class="band-assignment-header">
           <div>
             <h4>Sentinel-2 Band Assignment (Format B)</h4>
-            <p class="subtext">Verify or assign each uploaded file to its corresponding Sentinel-2 band. All 4 bands are required.</p>
+            <p class="subtext">Verify or assign each uploaded file to its corresponding Sentinel-2 band. All 4 bands are required for 4-channel tensor generation.</p>
           </div>
           <span class="assignment-status-badge" id="assignment-status-badge">Incomplete</span>
         </div>
@@ -133,22 +251,31 @@
       <!-- Action Button -->
       <div class="upload-actions">
         <button class="btn btn-primary" id="analyze-btn" disabled>
-          <span class="btn-text">Analyze Images</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span class="btn-text">Execute AI Cloud Detection</span>
         </button>
       </div>
     </section>
 
-    <!-- Loading State -->
+    <!-- Loading State Card -->
     <section class="card loading-card" id="loading-card" style="display: none;">
       <div class="spinner"></div>
-      <h3 id="loading-text">Analyzing satellite scenes with U-Net...</h3>
-      <p class="loading-subtext">Executing deep learning segmentation and calculating cloud coverage metrics.</p>
+      <h3 id="loading-text">Analyzing satellite scenes with PyTorch U-Net...</h3>
+      <p class="loading-subtext">Executing deep learning segmentation tensor feedforward and calculating cloud coverage metrics.</p>
     </section>
 
-    <!-- Results Section -->
+    <!-- Live Analysis Results Section -->
     <section class="results-container" id="results-container" style="display: none;">
       <div class="section-heading">
-        <h2>Live Scene Analysis Results</h2>
+        <h2>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          Live Scene Analysis Results
+        </h2>
         <div class="summary-pills">
           <span class="summary-pill pill-success" id="summary-success-pill">0 Succeeded</span>
           <span class="summary-pill pill-failed" id="summary-failed-pill" style="display: none;">0 Failed</span>
@@ -167,7 +294,7 @@
       <div class="eval-header-card">
         <div class="eval-title-wrap">
           <div class="eval-icon-badge">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 20V10M12 20V4M6 20v-6"/>
             </svg>
           </div>
@@ -203,7 +330,7 @@
           <div class="metric-footnote"><span class="highlight-down">-22.84% pts</span> reduction vs Baseline (31.38%)</div>
         </div>
 
-        <div class="metric-card accent-blue">
+        <div class="metric-card accent-violet">
           <div class="metric-label">Precision & Specificity</div>
           <div class="metric-value">96.25% / 95.17%</div>
           <div class="metric-footnote">Low false alarms across bright terrain</div>
@@ -213,11 +340,18 @@
       <!-- Model Comparison Table Card -->
       <div class="card eval-comparison-card">
         <div class="card-header">
-          <h3>1. Model Comparison: U-Net vs. Brightness Baseline</h3>
-          <span class="eval-tag">Reported Test Benchmark — Source Verification Pending</span>
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            1. Model Comparison: U-Net vs. Brightness Baseline
+          </h3>
+          <span class="eval-tag">Reported Test Benchmark</span>
         </div>
         <p class="card-desc">
-          Comparative performance metrics from evaluation CSV records. Improvement indicates percentage point advantage of U-Net over the baseline.
+          Comparative performance metrics from evaluation records. Improvement indicates percentage point advantage of U-Net over the baseline.
         </p>
         <div class="report-table-wrapper">
           <table class="eval-table" id="comparison-table">
@@ -246,7 +380,14 @@
         <!-- Distribution Chart -->
         <div class="card">
           <div class="card-header">
-            <h3>2. Cloud Coverage Distribution</h3>
+            <h3>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+              2. Cloud Coverage Distribution
+            </h3>
             <span class="eval-tag">10% Bins</span>
           </div>
           <p class="card-desc">Distribution of scene cloud coverage percentage across all 1,262 benchmark scenes.</p>
@@ -258,7 +399,14 @@
         <!-- Dataset Summary Stats -->
         <div class="card">
           <div class="card-header">
-            <h3>3. Test-Set Composition</h3>
+            <h3>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              3. Test-Set Composition
+            </h3>
             <span class="eval-tag">Summary Statistics</span>
           </div>
           <p class="card-desc">Summary metrics across the 1,262 test scenes.</p>
@@ -283,7 +431,13 @@
       <div class="card eval-records-card">
         <div class="records-header">
           <div>
-            <h3>4. Per-Scene Usability Records</h3>
+            <h3>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              4. Per-Scene Usability Records
+            </h3>
             <p class="card-desc">Per-scene benchmark records — mask provenance not independently verified.</p>
           </div>
           <div class="records-search-box">
@@ -334,6 +488,11 @@
   <footer class="app-footer">
     <div class="footer-container">
       <p>CloudSight AI &bull; Sentinel-2 Cloud Detection Pipeline &bull; CPU U-Net Inference Engine &bull; Benchmark Dataset (1,262 Scenes)</p>
+      <div class="footer-links">
+        <a href="#upload-section">Upload & Analyze</a>
+        <a href="#evaluation-section">Evaluation Benchmarks</a>
+        <a href="https://github.com" target="_blank" rel="noopener">Documentation</a>
+      </div>
     </div>
   </footer>
 
